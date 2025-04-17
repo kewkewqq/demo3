@@ -44,6 +44,12 @@ app_license = "mit"
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
+
+doctype_list_js = {
+    "ThaiFood": "demo3/doctype/thaifood/thaifood_list.js"
+}
+
+
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -145,6 +151,12 @@ app_license = "mit"
 # 	}
 # }
 
+doc_events = {
+    "Products": {
+        "validate": "demo3.demo3.doctype.products.products.Products.validate"
+    }
+}
+
 # Scheduled Tasks
 # ---------------
 
@@ -242,3 +254,12 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+
+fixtures = [
+    {
+        "doctype": "DocType",
+        "filters": {
+            "name": ["in", ["last-create-doctype"]]
+        }
+    }
+]
