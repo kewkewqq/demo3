@@ -7,51 +7,6 @@ from io import BytesIO
 
 class ThaiFood(Document):
     pass
-# @frappe.whitelist(allow_guest=False)  # หรือถ้าอยากเปิด public -> allow_guest=True
-# def upload_thaifood_excel():
-#     if "file" not in frappe.request.files:
-#         frappe.throw("No file uploaded.")
-    
-#     file = frappe.request.files["file"]
-#     file_content = file.stream.read()
-
-#     workbook = openpyxl.load_workbook(filename=BytesIO(file_content))
-#     sheet = workbook.active
-
-#     # อ่าน Header แถวที่ 1
-#     headers = [cell.value for cell in sheet[1]]
-
-#     success = 0
-#     fail = 0
-#     inserted_docs = []
-#     for row in sheet.iter_rows(min_row=2, values_only=True):
-#         if not any(row):  # ข้ามแถวว่าง
-#             continue
-
-#         data = dict(zip(headers, row))
-
-#         try:
-#             doc = frappe.new_doc("ThaiFood")
-#             doc.foodname = data.get("FoodName")
-#             doc.foodtype = data.get("FoodType")
-#             # ใส่ฟิลด์อื่นๆตาม Doctype จริงที่คุณมี
-#             doc.insert()
-#             inserted_docs.append({
-#                 "name": doc.name,
-#                 "foodname": doc.foodname,
-#                 "foodtype": doc.foodtype
-#             }) 
-#             success += 1
-#         except Exception as e:
-#             frappe.log_error(message=str(e), title="ThaiFood Import Error")
-#             fail += 1
-
-#     return {
-#         "success": success,
-#         "fail": fail,
-#         "inserted_records": inserted_docs
-#     }
-
 
 
 @frappe.whitelist(allow_guest=False)
@@ -70,15 +25,25 @@ def upload_thaifood_excel():
     success = 0
     fail = 0
     import_log = []
+    inserted_records = []  # <<< เพิ่มตัวนี้
 
-    for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):  # start=2 แถวที่ 2 จริง ๆ
+    for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
         if not any(row):
             continue
 
         data = dict(zip(headers, row))
 
         try:
-            # ตรวจสอบก่อน insert ว่ามีซ้ำไหม
+            # เช็ค FoodType ก่อน
+            food_type_name = data.get("FoodType")
+            if food_type_name:
+                if not frappe.db.exists("FoodType", {"name": food_type_name}):
+                    # ถ้าไม่มี สร้างใหม่
+                    foodtype_doc = frappe.new_doc("FoodType")
+                    foodtype_doc.foodtypename = food_type_name  # ชื่อตาม field จริงของ Doctype FoodType
+                    foodtype_doc.insert()
+
+            # เช็ค ThaiFood ซ้ำ
             if frappe.db.exists("ThaiFood", {"foodname": data.get("FoodName")}):
                 import_log.append({
                     "row": idx,
@@ -88,16 +53,21 @@ def upload_thaifood_excel():
                 fail += 1
                 continue
 
-            # ถ้าไม่มีซ้ำ Insert ใหม่
+            # Insert ThaiFood
             doc = frappe.new_doc("ThaiFood")
             doc.foodname = data.get("FoodName")
-            doc.foodtype = data.get("FoodType")
+            doc.foodtype = data.get("FoodType")  # ที่แน่ใจว่ามีใน FoodType แล้ว
             doc.insert()
 
+            inserted_records.append({
+                "name": doc.name,
+                "foodname": doc.foodname,
+                "foodtype": doc.foodtype
+            })
             import_log.append({
                 "row": idx,
                 "status": "Success",
-                "message": "Inserted successfully"
+                "message": "Inserted successfully",
             })
             success += 1
 
@@ -113,8 +83,72 @@ def upload_thaifood_excel():
     return {
         "success": success,
         "fail": fail,
-        "import_log": import_log
+        "import_log": inserted_records
     }
+
+
+
+# @frappe.whitelist(allow_guest=False)
+# def upload_thaifood_excel():
+#     if "file" not in frappe.request.files:
+#         frappe.throw("No file uploaded.")
+    
+#     file = frappe.request.files["file"]
+#     file_content = file.stream.read()
+
+#     workbook = openpyxl.load_workbook(filename=BytesIO(file_content))
+#     sheet = workbook.active
+
+#     headers = [cell.value for cell in sheet[1]]
+
+#     success = 0
+#     fail = 0
+#     import_log = []
+
+#     for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):  # start=2 แถวที่ 2 จริง ๆ
+#         if not any(row):
+#             continue
+
+#         data = dict(zip(headers, row))
+
+#         try:
+#             # ตรวจสอบก่อน insert ว่ามีซ้ำไหม
+#             if frappe.db.exists("ThaiFood", {"foodname": data.get("FoodName")}):
+#                 import_log.append({
+#                     "row": idx,
+#                     "status": "Fail",
+#                     "message": f"Duplicate Name: ThaiFood {data.get('FoodName')} already exists"
+#                 })
+#                 fail += 1
+#                 continue
+
+#             # ถ้าไม่มีซ้ำ Insert ใหม่
+#             doc = frappe.new_doc("ThaiFood")
+#             doc.foodname = data.get("FoodName")
+#             doc.foodtype = data.get("FoodType")
+#             doc.insert()
+
+#             import_log.append({
+#                 "row": idx,
+#                 "status": "Success",
+#                 "message": "Inserted successfully"
+#             })
+#             success += 1
+
+#         except Exception as e:
+#             frappe.log_error(message=str(e), title="ThaiFood Import Error")
+#             import_log.append({
+#                 "row": idx,
+#                 "status": "Fail",
+#                 "message": str(e)
+#             })
+#             fail += 1
+
+#     return {
+#         "success": success,
+#         "fail": fail,
+#         "import_log": import_log
+#     }
 
 
 @frappe.whitelist(allow_guest=False)
