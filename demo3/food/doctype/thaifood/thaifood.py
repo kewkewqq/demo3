@@ -23,6 +23,7 @@ def upload_thaifood_excel():
 
     success = 0
     fail = 0
+    inserted_docs = []
     for row in sheet.iter_rows(min_row=2, values_only=True):
         if not any(row):  # ข้ามแถวว่าง
             continue
@@ -35,6 +36,11 @@ def upload_thaifood_excel():
             doc.foodtype = data.get("FoodType")
             # ใส่ฟิลด์อื่นๆตาม Doctype จริงที่คุณมี
             doc.insert()
+            inserted_docs.append({
+                "name": doc.name,
+                "foodname": doc.foodname,
+                "foodtype": doc.foodtype
+            }) 
             success += 1
         except Exception as e:
             frappe.log_error(message=str(e), title="ThaiFood Import Error")
@@ -42,5 +48,6 @@ def upload_thaifood_excel():
 
     return {
         "success": success,
-        "fail": fail
+        "fail": fail,
+        "inserted_records": inserted_docs
     }
