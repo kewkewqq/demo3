@@ -83,7 +83,8 @@ def upload_thaifood_excel():
     return {
         "success": success,
         "fail": fail,
-        "import_log": inserted_records
+        "import_log": inserted_records,
+        "import_log": import_log
     }
 
 
